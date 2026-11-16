@@ -8,6 +8,7 @@ use axtask::current;
 use axtask::TaskExtRef;
 use axhal::paging::MappingFlags;
 use arceos_posix_api as api;
+use memory_addr::MemoryAddr;
 
 const SYS_IOCTL: usize = 29;
 const SYS_OPENAT: usize = 56;
@@ -140,7 +141,45 @@ fn sys_mmap(
     fd: i32,
     _offset: isize,
 ) -> isize {
-    unimplemented!("no sys_mmap!");
+    let curr = current();
+    let mut aspace = curr.task_ext().aspace.lock();
+    let permission_flags = MmapProt::from_bits_truncate(prot);
+    let map_flags: MappingFlags = permission_flags.into();
+
+    let aligned_length = memory_addr::align_up_4k(length);
+    let start_addr = if flags & MmapFlags::MAP_FIXED.bits() != 0 && !addr.is_null() {
+        let va = memory_addr::VirtAddr::from(addr as usize).align_down_4k();
+        let _ = aspace.unmap(va, aligned_length);
+        va
+    } else {
+        let hint = if addr.is_null() {
+            aspace.base()
+        } else {
+            memory_addr::VirtAddr::from(addr as usize)
+        };
+        let limit = memory_addr::VirtAddrRange::from_start_size(aspace.base(), aspace.size());
+        match aspace.find_free_area(hint, aligned_length, limit) {
+            Some(va) => va.align_down_4k(),
+            None => return -1,
+        }
+    };
+
+    if aspace
+        .map_alloc(start_addr, aligned_length, map_flags, true)
+        .is_err()
+    {
+        return -1;
+    }
+
+    if flags & MmapFlags::MAP_ANONYMOUS.bits() == 0 && fd >= 0 {
+        let mut buf = alloc::vec![0u8; length];
+        let n = api::sys_read(fd, buf.as_mut_ptr() as *mut c_void, length);
+        if n > 0 {
+            let _ = aspace.write(start_addr, &buf[..n as usize]);
+        }
+    }
+
+    start_addr.as_usize() as isize
 }
 
 fn sys_openat(dfd: c_int, fname: *const c_char, flags: c_int, mode: api::ctypes::mode_t) -> isize {
