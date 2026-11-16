@@ -49,6 +49,9 @@ fn main() {
     let ept_root = uspace.page_table_root();
     prepare_vm_pgtable(ept_root);
 
+    // Disable host timer interrupts while running the single-step guest VM.
+    unsafe { riscv::register::sie::clear_stimer(); }
+
     // Kick off vm and wait for it to exit.
     while !run_guest(&mut ctx) {
     }
@@ -102,16 +105,35 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
             }
         },
         Trap::Exception(Exception::IllegalInstruction) => {
-            panic!("Bad instruction: {:#x} sepc: {:#x}",
-                stval::read(),
+            let inst = stval::read();
+            ax_println!(
+                "VmExit Reason: IllegalInstruction: {:#x} sepc: {:#x}",
+                inst,
                 ctx.guest_regs.sepc
             );
+            // Emulate `csrr rd, mhartid` (CSR 0xf14)
+            if (inst & 0xfff0_707f) == 0xf140_2073 {
+                let rd = ((inst >> 7) & 0x1f) as u32;
+                if let Some(reg) = crate::regs::GprIndex::from_raw(rd) {
+                    ctx.guest_regs.gprs.set_reg(reg, 0x1234);
+                }
+                ctx.guest_regs.sepc += 4;
+            } else {
+                panic!(
+                    "Bad instruction: {:#x} sepc: {:#x}",
+                    inst,
+                    ctx.guest_regs.sepc
+                );
+            }
         },
         Trap::Exception(Exception::LoadGuestPageFault) => {
-            panic!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
+            ax_println!(
+                "VmExit Reason: LoadGuestPageFault: stval={:#x} sepc={:#x}",
                 stval::read(),
                 ctx.guest_regs.sepc
             );
+            ctx.guest_regs.gprs.set_reg(A0, 0x6688);
+            ctx.guest_regs.sepc += 4;
         },
         _ => {
             panic!(

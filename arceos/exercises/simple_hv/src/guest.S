@@ -29,10 +29,13 @@ _run_guest:
     sd   s11, ({hyp_s11})(a0)
     sd   sp, ({hyp_sp})(a0)
 
-    /* Swap in guest CSRs. */
-    ld    t1, ({guest_sstatus})(a0)
-    csrrw t1, sstatus, t1
+    /* Disable host interrupts while swapping CSRs and save host sstatus. */
+    csrrci t1, sstatus, 2
     sd    t1, ({hyp_sstatus})(a0)
+
+    ld    t1, ({guest_sstatus})(a0)
+    csrw  sstatus, t1
+    csrci sstatus, 2
 
     ld    t1, ({guest_hstatus})(a0)
     csrrw t1, hstatus, t1
@@ -130,6 +133,13 @@ _guest_exit:
     sd    t0, ({guest_a0})(a0)
 
 _restore_csrs:
+    /* Restore stvec and sscratch BEFORE re-enabling interrupts via sstatus. */
+    ld    t1, ({hyp_stvec})(a0)
+    csrw  stvec, t1
+
+    ld    t1, ({hyp_sscratch})(a0)
+    csrw  sscratch, t1
+
     /* Swap in hypervisor CSRs. */
     ld    t1, ({hyp_sstatus})(a0)
     csrrw t1, sstatus, t1
@@ -141,12 +151,6 @@ _restore_csrs:
     ld    t1, ({hyp_scounteren})(a0)
     csrrw t1, scounteren, t1
     sd    t1, ({guest_scounteren})(a0)
-
-    ld    t1, ({hyp_stvec})(a0)
-    csrw  stvec, t1
-
-    ld    t1, ({hyp_sscratch})(a0)
-    csrw  sscratch, t1
 
     /* Save guest EPC. */
     csrr  t1, sepc
