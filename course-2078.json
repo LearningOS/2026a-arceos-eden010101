@@ -2,8 +2,8 @@
   "schema": 1,
   "courseId": 2078,
   "repository": "LearningOS/2026a-arceos-eden010101",
-  "commit": "64564a209697b204096db79d68a4c2b4e1f9db2b",
-  "score": 400,
+  "commit": "83748b12f03812d5f96855d311f6d5218f557952",
+  "score": 500,
   "totalScore": 600,
   "exercises": [
     {
@@ -37,8 +37,8 @@
     {
       "name": "sys_map",
       "max": 100,
-      "score": 0,
-      "status": "fail",
+      "score": 100,
+      "status": "pass",
       "exitCode": 0
     },
     {
@@ -50,9 +50,9 @@
     }
   ],
   "student": "eden010101",
-  "runId": "43855703221",
+  "runId": "43858250586",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
