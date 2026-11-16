@@ -2,8 +2,8 @@
   "schema": 1,
   "courseId": 2078,
   "repository": "LearningOS/2026a-arceos-eden010101",
-  "commit": "7c3a07ea215b68783281d4fe87eff4e88e2021f3",
-  "score": 200,
+  "commit": "058ee28df3112f88f3293c0b1cec9d5cdc8b1662",
+  "score": 300,
   "totalScore": 600,
   "exercises": [
     {
@@ -23,8 +23,8 @@
     {
       "name": "alt_alloc",
       "max": 100,
-      "score": 0,
-      "status": "fail",
+      "score": 100,
+      "status": "pass",
       "exitCode": 0
     },
     {
@@ -50,9 +50,9 @@
     }
   ],
   "student": "eden010101",
-  "runId": "43848378028",
+  "runId": "43854823422",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
